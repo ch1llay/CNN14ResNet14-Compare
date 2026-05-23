@@ -1,6 +1,7 @@
-# НИР-3: Сравнительное исследование CNN14 vs ResNet18 на GTZAN
+# Сравнительное исследование CNN14 vs ResNet18 на GTZAN
 
 Сравнение двух парадигм transfer learning для классификации жанров музыкальных произведений:
+
 - **CNN14** (PANNs) — предобучение на AudioSet (audio→audio трансфер).
 - **ResNet18** — предобучение на ImageNet (vision→audio трансфер через мел-спектрограммы как изображения).
 
@@ -46,18 +47,18 @@ researches/CNN14ResNet14СCompare/
 В Kaggle нужно подключить 2-3 dataset-а:
 
 1. **GTZAN исходный** — уже есть в Kaggle:
-   - `andradaolteanu/gtzan-dataset-music-genre-classification`
-   - Подключить через "Add Data" в любом из ноутбуков.
+    - `andradaolteanu/gtzan-dataset-music-genre-classification`
+    - Подключить через "Add Data" в любом из ноутбуков.
 
 2. **Наш код `src/`** — загрузите как новый Kaggle Dataset (`gtzan-cnn14-resnet18-src`):
-   - Создайте: Kaggle → Datasets → New Dataset.
-   - Загрузите содержимое папки `src/` (без модификаций, просто как есть).
-   - Назовите slug: `gtzan-cnn14-resnet18-src`.
+    - Создайте: Kaggle → Datasets → New Dataset.
+    - Загрузите содержимое папки `src/` (без модификаций, просто как есть).
+    - Назовите slug: `gtzan-cnn14-resnet18-src`.
 
 3. **PANNs Cnn14 checkpoint** (рекомендуется, чтобы не качать каждый раз):
-   - Скачайте: `wget https://zenodo.org/record/3987831/files/Cnn14_mAP=0.431.pth`.
-   - Загрузите как Kaggle Dataset: `cnn14-panns` (один файл `Cnn14_mAP=0.431.pth`).
-   - **Альтернатива**: ноутбук 01 сам скачает через wget, если Internet включён в Settings (медленнее).
+    - Скачайте: `wget https://zenodo.org/record/3987831/files/Cnn14_mAP=0.431.pth`.
+    - Загрузите как Kaggle Dataset: `cnn14-panns` (один файл `Cnn14_mAP=0.431.pth`).
+    - **Альтернатива**: ноутбук 01 сам скачает через wget, если Internet включён в Settings (медленнее).
 
 ### Шаг 2. Запуск ноутбуков по порядку
 
@@ -117,31 +118,35 @@ jupyter notebook notebooks/00_data_prep.ipynb
 
 ## Ключевые методологические решения
 
-| Аспект | Решение | Обоснование |
-|---|---|---|
-| GTZAN cleanup | Sturm fault-filter (Sturm 2014) | Убирает дубликаты, mislabeled. ~900 чистых треков. |
-| Split | 5-fold stratified × 3 seeds | 15 runs для honest variance. Внутри train ещё 10% на val. |
-| Mel-параметры | PANNs стандарт: sr=32k, n_fft=1024, hop=320, n_mels=64 | Совместимость с PANNs весами |
-| Окна | 3 сек, stride 1.5 сек (50% overlap), median(softmax) на инференсе | Стандарт GTZAN community |
-| ResNet18 channel | avg conv1 (primary) + replicate + reinit_conv1 (ablation) | Сохраняет ImageNet-prior |
-| Fine-tuning | Two-stage: head → +last block, дифф. lr | PANNs recipe (Kong 2020) |
-| Optimizer | AdamW + cosine + warmup 2 эпохи, AMP fp16 | Современный стандарт transfer learning |
-| Augmentation | SpecAugment (Park 2019) + Mixup α=0.2 (Zhang 2018) | Регуляризация на маленьком датасете |
-| Метрики | accuracy, macro-F1, per-class, confusion matrix | Стандарт MIR |
-| Статистика | Bootstrap CI 95% + paired Wilcoxon | Per-track, не per-window |
-| Calibration | ECE 10 bins + reliability diagram | Guo 2017 |
-| Embeddings | UMAP/t-SNE на penultimate features | Доменно-нейтральный анализ |
-| Explainability | Grad-CAM на conv_block6 (CNN14) / layer4 (ResNet18) | Side-by-side сравнение |
+| Аспект           | Решение                                                           | Обоснование                                               |
+|------------------|-------------------------------------------------------------------|-----------------------------------------------------------|
+| GTZAN cleanup    | Sturm fault-filter (Sturm 2014)                                   | Убирает дубликаты, mislabeled. ~900 чистых треков.        |
+| Split            | 5-fold stratified × 3 seeds                                       | 15 runs для honest variance. Внутри train ещё 10% на val. |
+| Mel-параметры    | PANNs стандарт: sr=32k, n_fft=1024, hop=320, n_mels=64            | Совместимость с PANNs весами                              |
+| Окна             | 3 сек, stride 1.5 сек (50% overlap), median(softmax) на инференсе | Стандарт GTZAN community                                  |
+| ResNet18 channel | avg conv1 (primary) + replicate + reinit_conv1 (ablation)         | Сохраняет ImageNet-prior                                  |
+| Fine-tuning      | Two-stage: head → +last block, дифф. lr                           | PANNs recipe (Kong 2020)                                  |
+| Optimizer        | AdamW + cosine + warmup 2 эпохи, AMP fp16                         | Современный стандарт transfer learning                    |
+| Augmentation     | SpecAugment (Park 2019) + Mixup α=0.2 (Zhang 2018)                | Регуляризация на маленьком датасете                       |
+| Метрики          | accuracy, macro-F1, per-class, confusion matrix                   | Стандарт MIR                                              |
+| Статистика       | Bootstrap CI 95% + paired Wilcoxon                                | Per-track, не per-window                                  |
+| Calibration      | ECE 10 bins + reliability diagram                                 | Guo 2017                                                  |
+| Embeddings       | UMAP/t-SNE на penultimate features                                | Доменно-нейтральный анализ                                |
+| Explainability   | Grad-CAM на conv_block6 (CNN14) / layer4 (ResNet18)               | Side-by-side сравнение                                    |
 
 ---
 
 ## Подводные камни (читать обязательно)
 
-1. **GTZAN duplicates & artist leakage** — мы применяем Sturm filter, но рекомендуется в финальном sanity check сделать artist-aware split (см. raise в дисскусии отчёта).
-2. **PANNs встроенный mel-extractor** — мы его не используем (`accept_waveform=False`), подаём предвычисленные log-mel. Не запутаться.
-3. **ResNet18 input shape** — mel 64×300 даёт маленький feature map ~2×10 после ResNet18. Это компромисс ради честного сравнения архитектур (одинаковый вход).
+1. **GTZAN duplicates & artist leakage** — мы применяем Sturm filter, но рекомендуется в финальном sanity check сделать
+   artist-aware split (см. raise в дисскусии отчёта).
+2. **PANNs встроенный mel-extractor** — мы его не используем (`accept_waveform=False`), подаём предвычисленные log-mel.
+   Не запутаться.
+3. **ResNet18 input shape** — mel 64×300 даёт маленький feature map ~2×10 после ResNet18. Это компромисс ради честного
+   сравнения архитектур (одинаковый вход).
 4. **AMP + cudnn.deterministic** — могут конфликтовать. Мы держим deterministic=True ценой ~10% скорости.
-5. **Gradio share=True** — создаёт публичный URL, на нём может играть случайная музыка ваших знакомых. Не держать дольше демо.
+5. **Gradio share=True** — создаёт публичный URL, на нём может играть случайная музыка ваших знакомых. Не держать дольше
+   демо.
 
 ---
 
@@ -218,7 +223,9 @@ jupyter notebook notebooks/00_data_prep.ipynb
 
 - **PANNs CNN14 checkpoint**: MIT (Kong et al. 2020).
 - **torchvision ResNet18**: BSD-3-Clause.
-- **GTZAN dataset**: Tzanetakis 2002 — широко используется в академических работах, фактически в public domain (нет официальной лицензии, рекомендуется ссылка на оригинальную статью).
+- **GTZAN dataset**: Tzanetakis 2002 — широко используется в академических работах, фактически в public domain (нет
+  официальной лицензии, рекомендуется ссылка на оригинальную статью).
 - **Этот проект (код)**: MIT.
-#   C N N 1 4 R e s N e t 1 4 - C o m p a r e  
- 
+  #   C N N 1 4 R e s N e t 1 4 - C o m p a r e 
+   
+   
